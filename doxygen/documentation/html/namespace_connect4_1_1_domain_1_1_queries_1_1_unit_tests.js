@@ -1,0 +1,9 @@
+var namespace_connect4_1_1_domain_1_1_queries_1_1_unit_tests =
+[
+    [ "GetFinishedGamesQueryHandlerTest", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_handler_test.html", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_handler_test" ],
+    [ "GetFinishedGamesQueryTest", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_test.html", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_test" ],
+    [ "GetPlayingGameQueryHandlerTest", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_playing_game_query_handler_test.html", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_playing_game_query_handler_test" ],
+    [ "GetPlayingGameQueryTest", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_playing_game_query_test.html", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_playing_game_query_test" ],
+    [ "GetWaitingGamesQueryHandlerTest", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_waiting_games_query_handler_test.html", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_waiting_games_query_handler_test" ],
+    [ "GetWaitingGamesQueryTest", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_waiting_games_query_test.html", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_waiting_games_query_test" ]
+];

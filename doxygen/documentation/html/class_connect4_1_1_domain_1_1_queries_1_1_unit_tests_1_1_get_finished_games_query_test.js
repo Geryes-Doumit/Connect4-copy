@@ -1,0 +1,7 @@
+var class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_test =
+[
+    [ "Constructor_Should_Set_Properties_Correctly", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_test.html#adf7cb76408162cbe2593dddedbde9e60", null ],
+    [ "LimitOrDefault_Should_Return_10_When_Limit_Is_Null", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_test.html#a6b6a6c57b45393053711047631b9d393", null ],
+    [ "OffsetOrDefault_Should_Return_0_When_Offset_Is_Null", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_test.html#afdaa267446b3a0f0a13f0a929eafdc0e", null ],
+    [ "UserName_Property_Should_Set_And_Get_Correctly", "class_connect4_1_1_domain_1_1_queries_1_1_unit_tests_1_1_get_finished_games_query_test.html#a4b837eefa14aefe1e29d85f28d3ae806", null ]
+];

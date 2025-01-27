@@ -1,0 +1,194 @@
+﻿@page "/gamehistory"
+@using Connect4.Common.Model
+@using Connect4.UI.Data.Services
+@inject GameListService GameListService
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject NavigationManager NavigationManager
+
+<PageTitle>Game History</PageTitle>
+
+<div class="inline">
+    <h3>Game History</h3>
+    <button class="refresh" @onclick="RefreshGames">
+        <img class="refresh-img" 
+            src="/refresh.svg" alt="Refresh" />
+    </button>
+</div>
+
+@if(Games.Count == 0)
+{
+    <p>No games played yet</p>
+}
+else
+{
+    <div class="gameHistory">
+        @foreach (var game in Games)
+        {
+            <div class="gameHistoryItem">
+                <span>@game.GameName (@game.Host vs @game.Guest)</span>
+
+                <span>Winner: @(game.Winner == "" ? "Draw" : game.Winner) </span>
+            </div>
+        }
+    </div>
+    @if (ShowLoadMoreButton)
+    {
+        <button class="load-more" @onclick="() => LoadGames(LIMIT, Games.Count)">Load more</button>
+    }
+}
+
+<style>
+    .gameHistory {
+        margin-top: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .gameHistoryItem {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.5rem;
+        width: 70%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        /* Blue to purple gradient */
+        background: rgb(2,0,36);
+        background: linear-gradient(90deg, rgb(5, 0, 107) 0%, rgba(60,9,121,1) 35%, rgba(199,0,255,1) 100%);
+        ;
+        /* text elements */
+        color: #ffffff;
+        text-decoration: none;
+        font-size: medium;
+        font-weight: bold;
+    }
+
+    .load-more {
+        background-color: rgb(5, 0, 107);
+        color: white;
+        border: none;
+        border-radius: 400px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-size: 1rem;
+        margin: 1rem 0;
+        transition: 0.3s ease-out;
+    }
+
+    .load-more:hover {
+        scale: 1.04;
+    }
+
+    .load-more:active {
+        scale: 1.02;
+    }
+
+    .inline {
+        display: flex;
+        align-items: center;
+    }
+
+    .refresh { 
+        background-color: rgb(5, 0, 107);
+        color: white;
+        border: none;
+        border-radius: 400px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-size: 1rem;
+        margin: 0 1rem 0 2rem;
+        transition: 0.3s ease-out;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .refresh:hover {
+            scale: 1.04;
+        }
+
+        .refresh:active {
+            scale: 1.02;
+        }
+    
+    .refresh-img { 
+        height: 90%;
+        aspect-ratio: 1/1;
+    }
+</style>
+
+
+@code {
+    const int LIMIT = 5;
+    List<FinishedGamesResponseDto> Games = new List<FinishedGamesResponseDto>();
+    
+    private string? Token { get; set; }
+
+    private bool ShowLoadMoreButton = true;
+
+    protected override async void OnInitialized()
+    {
+        Token = await localStorage.GetItemAsync<string>("token");
+        if (Token != null)
+        {
+            Token = Token.Trim('"');
+        }
+        
+        LoadGames();
+    }
+
+    public async void LoadGames(int limit = LIMIT, int offset = 0, bool replace = false)
+    {
+        if (Token == null)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        var httpResponse = await GameListService.SendGetGameHistoryRequest(
+            Token, limit, offset
+        );
+
+        switch (httpResponse.StatusCode)
+        {
+            case System.Net.HttpStatusCode.OK:
+                var newGames = await httpResponse.Content.ReadFromJsonAsync<List<FinishedGamesResponseDto>>();
+                if (newGames != null)
+                {
+                    if (newGames.Count < LIMIT)
+                    {
+                        ShowLoadMoreButton = false;
+                    }
+                    if (replace)
+                    {
+                        Games = newGames;
+                    }
+                    else
+                    {
+                        Games.AddRange(newGames);
+                    }
+                } else
+                {
+                    ShowLoadMoreButton = false;
+                }
+                StateHasChanged();
+                break;
+            case System.Net.HttpStatusCode.Unauthorized:
+                NavigationManager.NavigateTo("/login");
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void RefreshGames()
+    {
+        LoadGames(replace: true);
+    }
+}
+

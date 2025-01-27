@@ -1,0 +1,6 @@
+var class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_busy_user_domain_exception_test =
+[
+    [ "Constructor_WithNonNullGameId_SetsPropertiesCorrectly", "class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_busy_user_domain_exception_test.html#a61632a43490df730c95f466d0b7a2c30", null ],
+    [ "Constructor_WithNullGameId_SetsGameIdToZero", "class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_busy_user_domain_exception_test.html#a486dc93a3f7466db85e03cd90af4c36d", null ],
+    [ "GameIdProperty_CanBeSetAndRetrieved", "class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_busy_user_domain_exception_test.html#ac1e94bd453a3d50159bb5a00a9d5aed0", null ]
+];

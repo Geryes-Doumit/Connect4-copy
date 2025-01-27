@@ -1,0 +1,155 @@
+﻿@page "/login"
+@inject NavigationManager NavigationManager
+@using Connect4.Common.Model
+@using Connect4.UI.Data.Services
+@inject UserService UserService
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@using System.Text.Json
+
+<h3 style="text-align: center; font-size: 2rem; margin-bottom: 1rem; color: #333;">Login</h3>
+
+<div class="login-container">
+    <div class="login">
+        <input type="text" placeholder="Username" @bind=username class="login-input" />
+        <input type="password" placeholder="Password" @bind=password class="login-input" />
+        <button @onclick="GotoGamesList" class="login-button">Login</button>
+        <p class="red">@Message</p>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .login {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 300px;
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .login-input {
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+    }
+
+    .login-input:focus {
+        border-color: #4facfe;
+        outline: none;
+        box-shadow: 0 0 4px rgba(79, 172, 254, 0.5);
+    }
+
+    .login-button {
+        padding: 0.8rem;
+        background: linear-gradient(to right, #4facfe, #00f2fe);
+        border: none;
+        border-radius: 5px;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: 0.2s ease;
+    }
+
+    .login-button:hover {
+        transform: scale(1.02);
+    }
+
+    .login-button:active {
+        transform: scale(0.98);
+    }
+
+    .nav-item {
+        display: none;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .red {
+        color: rgb(211, 77, 77);
+        width: 100%;
+        text-align: center;
+    }
+</style>
+
+@code {
+    private string username = "";
+    private string password = "";
+
+    private string Message = "";
+
+    protected override async void OnInitialized() {
+        string? token = await localStorage.GetItemAsync<string>("token");
+
+        if (!string.IsNullOrEmpty(token)) {
+            NavigationManager.NavigateTo("gamelist");
+        }
+    }
+
+    private async Task<LoginResponseDto?> UserLogIn() {
+        try {
+            var httpResponse = await UserService.SendLoginRequest(username, password);
+
+            switch (httpResponse.StatusCode) {
+                case System.Net.HttpStatusCode.OK:
+                    var responseSteam = await httpResponse.Content.ReadAsStreamAsync();
+                    var userItem = await JsonSerializer.DeserializeAsync<LoginResponseDto>(
+                        responseSteam, UserService.JsonOptions
+                    );
+                    return userItem;
+
+                case System.Net.HttpStatusCode.Unauthorized:
+                    Message = "Invalid username or password.";
+                    Console.WriteLine(Message);
+                    StateHasChanged();
+                    return null;
+
+                default:
+                    Message = "An error occured. Status code: " + httpResponse.StatusCode;
+                    Console.WriteLine(Message);
+                    StateHasChanged();
+                    return null;
+            }
+
+        } catch (Exception e) {
+            Message = "An error occured while trying to call the API.";
+            Console.WriteLine(e.Message);
+            StateHasChanged();
+            return null;
+        }
+    }
+
+    private async void GotoGamesList()
+    {
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            Message = "Please enter username and password.";
+            StateHasChanged();
+            return;
+        }
+
+        var userItem = await UserLogIn();
+        if (userItem == null) {
+            return;
+        }
+        else // if login is successful, navigate to the game list
+        {
+            // Save token in the local storage
+            await localStorage.SetItemAsync("token", userItem.Token);
+
+            NavigationManager.NavigateTo("gamelist");
+        }
+    }
+}

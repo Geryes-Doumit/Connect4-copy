@@ -1,0 +1,362 @@
+﻿@page "/gameboard/{gameId}"
+@inject NavigationManager Navigation
+@using Connect4.Common.Model
+@using Blazored.Modal
+@using Blazored.Modal.Services
+@using Connect4.UI.Data.Services
+@using Connect4.UI.Data
+@using System.Timers
+@inject InGameService InGameService
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+<h1 style="text-align: center; font-size: 3rem; margin-bottom: 20px;">
+    <div style="width=100%; display: flex; justify-content: center;"> 
+        @if (GameDetails != null)
+        {
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <p class="game-title">@GameDetails.GameName</p>
+                <p class="subtitle">@GameDetails.Host vs @(GuestString())</p>
+                @if (!string.IsNullOrEmpty(GameDetails.Winner) && GameDetails.Status == "Finished")
+                {
+                    <p class="subtitle">@GameDetails.Winner wins!</p>
+                }
+                else if(string.IsNullOrEmpty(GameDetails.Winner) && GameDetails.Status == "Finished") {
+                    <p class="subtitle">It's a draw!</p>
+                }
+                else {
+                    <p class="subtitle">It's @(CurrentPlayerString())'s turn</p>
+                }
+                
+            </div>
+        } else {
+            <p class="game-title">Connect4 4</p>
+        }
+    </div>
+</h1>
+
+<div class="grid-container">
+    <div class="grid">
+        @for (int row = 0; row < Rows; row++)
+        {
+            <div class="row">
+                @for (int col = 0; col < Columns; col++)
+                {
+                    var currentRow = row;
+                    var currentCol = col;
+                    <div class="cell @GetCellClass(Grid[currentRow, currentCol])" @onclick="() => OnCellClick(currentCol)">
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+<div class="footer-div">
+    <footer class="footer">
+        <button class="leave-button" @onclick="ShowModal">Leave Game</button>
+    </footer>
+</div>
+
+
+<style>
+    body {
+        background-image: url('/Connect4-background.png');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+    
+    .grid-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-rows: repeat(6, 1fr);
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+        background-color: #ffffffb7;
+        border-radius: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+    }
+
+    .cell {
+        width: 80px;
+        height: 80px;
+        background-color: lightblue;
+        border: 1px solid #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        border-radius: 50%;
+        transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .cell.empty {
+        background-color: white;
+    }
+    .cell.player1 {
+        background-color: red;
+    }
+    .cell.player2 {
+        background-color: yellow;
+    }
+
+    .cell.empty:hover {
+        transform: scale(1.1);
+        opacity: 0.9;
+    }
+
+    .game-title {
+        text-align: center;
+        border-radius: 20px;
+        border: 1px solid lightgray;
+        width: 100%;
+        padding: 10px;
+    }
+
+    .subtitle {
+        text-align: center;
+        font-size: 1.1rem;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .top-row {
+        display: none !important;
+    }
+
+    .footer-div {
+        /* Fix it at the bottom of the screen */
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        margin: 10px 0 10px 0;
+        width: 100%;
+    }
+
+    .footer {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .leave-button {
+        padding: 0.8rem;
+        background: linear-gradient(to right, #4facfe, #00f2fe);
+        border: none;
+        border-radius: 5px;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: 0.2s ease;
+        width: 10%;
+    }
+
+    .leave-button:hover {
+        transform: scale(1.02);
+    }
+
+    .leave-button:active {
+        transform: scale(0.98);
+    }
+
+</style>
+
+@code {
+    private const int Rows = 6;
+    private const int Columns = 7;
+
+    [Parameter]
+    public required string gameId { get; set; }
+
+    public int intGameId { get; set; }
+
+    public string? Token { get; set; }
+
+    private char[,] Grid = BoardUtilities.GetEmptyBoard();
+
+    private GameDetailDto? GameDetails { get; set; }
+
+    Timer timer {get; set;} = new Timer(1000);
+
+    protected async override void OnInitialized()
+    {
+        Token = await localStorage.GetItemAsStringAsync("token");
+
+        if (Token == null)
+        {
+            NavigateToLogin();
+            return;
+        }
+
+        Token = Token.Trim('"');
+
+        intGameId = int.Parse(gameId);
+
+        GetBoard(Token, intGameId);
+
+        StartAutoRefresh();
+    }
+
+    private void StartAutoRefresh()
+    {
+        timer.Elapsed += async (sender, e) => {
+            if (Token == null)
+            {
+                NavigateToLogin();
+                return;
+            }
+            GetBoard(Token, intGameId);
+        };
+        timer.AutoReset = true;
+        timer.Enabled = true;
+        timer.Start();
+    }
+
+    // catch any naviation away from the page to stop the timer
+    
+
+    protected async void GetBoard(string token, int gameid)
+    {
+        if (token == null)
+        {
+            NavigateToLogin();
+            return;
+        }
+
+        var httpResponse = await InGameService.SendGetGameDetailsRequest(token, gameid);
+
+        switch (httpResponse.StatusCode)
+        {
+            case System.Net.HttpStatusCode.OK:
+                GameDetails = await httpResponse.Content.ReadFromJsonAsync<GameDetailDto>();
+                if (GameDetails != null)
+                {
+                    Grid = BoardUtilities.GetBoardArrayFromString(GameDetails.Board.State);
+                }
+                StateHasChanged();
+                break;
+            case System.Net.HttpStatusCode.Unauthorized:
+                NavigateToLogin();
+                break;
+            default:
+                break;
+        }
+    }
+
+    [CascadingParameter] public IModalService Modal { get; set; } = default!;
+
+    public void ShowModal()
+    {
+        if (GameDetails == null)
+        {
+            NavigateToLogin();
+            return;
+        }
+
+        var parameters = new ModalParameters();
+        parameters.Add("gameId", gameId);
+        parameters.Add("GameDetails", GameDetails);
+        var modalRef = Modal.Show<LeaveModal>("Leave Game?", parameters);
+    }
+
+    private async void OnCellClick(int col)
+    {
+        if (Token == null)
+        {
+            NavigateToLogin();
+            return;
+        }
+
+        if (GameDetails.Status == "Finished") {
+            return;
+        }
+
+        var httpRequest = await InGameService.SendPlayMoveRequest(Token, intGameId, col);
+
+        switch (httpRequest.StatusCode)
+        {
+            case System.Net.HttpStatusCode.OK:
+                GetBoard(Token, intGameId);
+                break;
+            case System.Net.HttpStatusCode.Unauthorized:
+                NavigateToLogin();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private string GetCellClass(char value)
+    {
+        return value switch
+        {
+            '1' => "player1",
+            '2' => "player2",
+            _ => "empty"
+        };
+    }
+
+    private void NavigateToLogin()
+    {
+        timer.Stop();
+        Navigation.NavigateTo("/login");
+    }
+
+    private string GuestString() {
+        if (GameDetails != null)
+        {
+            if (string.IsNullOrEmpty(GameDetails.Guest))
+            {
+                return "[Waiting for guest]";
+            }
+            return GameDetails.Guest;
+        }
+        return "";
+    }
+
+    private string CurrentPlayerString() {
+        if (GameDetails != null)
+        {
+            if (string.IsNullOrEmpty(GameDetails.Board.CurrentPlayer)) {
+                return "[Future Guest]";
+            }
+            return GameDetails.Board.CurrentPlayer;
+        }
+        return "";
+    }
+
+    // Manage page leave and stop the timer
+    private IDisposable? registration;
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            registration = 
+                Navigation.RegisterLocationChangingHandler(OnLocationChanging);
+        }
+    }
+
+    // To show the LeaveModal when the user tries to navigate away
+    private ValueTask OnLocationChanging(LocationChangingContext context)
+    {
+        timer.Stop();
+        return ValueTask.CompletedTask;
+    }
+
+    public void Dispose() => registration?.Dispose();
+}

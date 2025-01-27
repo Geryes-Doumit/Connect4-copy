@@ -1,0 +1,53 @@
+﻿@using Connect4.UI.Data.Services
+@using Connect4.Common.Model
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject UserService UserService
+@using System.Security.Claims
+
+@inherits LayoutComponentBase
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+
+            <a @onclick=OnLogOut style="cursor: pointer;">Log out</a>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    public string UserName { get; set; } = "";
+    
+    public void NavigateToLogin() {
+        NavigationManager.NavigateTo("/login");
+    }
+
+    private async void OnLogOut() {
+        string? token = await localStorage.GetItemAsync<string>("token");
+
+        if (string.IsNullOrEmpty(token)) {
+            await localStorage.RemoveItemAsync("token");
+            NavigateToLogin();
+            return;
+        }
+
+        try {
+            await UserService.SendLogoutRequest(token);
+            // we don't care about the response, we reset the token 
+            // in localstoreage and redirect to login anyway.
+        } catch (Exception e) {
+            Console.WriteLine(e.Message);
+        }
+
+        await localStorage.RemoveItemAsync("token");
+        NavigateToLogin();
+    }
+}

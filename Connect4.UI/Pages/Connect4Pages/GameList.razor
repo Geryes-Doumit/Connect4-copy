@@ -1,0 +1,310 @@
+﻿@page "/gamelist"
+@inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@using Connect4.UI.Data.Services
+@using Connect4.Common.Model
+@inject GameListService GameService
+@inject InGameService InGameService
+@using System.Text.Json
+@using Blazored.Modal
+@using Blazored.Modal.Services
+
+<PageTitle>Available Games</PageTitle>
+
+<div class="inline">
+    <h3>Available Games</h3> 
+    <button class="refresh" @onclick="RefreshGames">
+        <img class="refresh-img" 
+             src="/refresh.svg" alt="Refresh" />
+    </button>
+    <button class="add-button" @onclick="NewGame">New</button>
+</div>
+
+@if(Games.Count == 0)
+{
+    @if(string.IsNullOrEmpty(ErrorMessage)) {
+        <p>No games available</p>
+    }
+    else {
+        <p>@ErrorMessage</p>
+    }
+}
+else
+{
+    <div class="gameList">
+        @foreach (var game in Games)
+        {
+            <a class="gameListItem" @onclick="() => JoinGame(game.GameId)">
+                @(game.GameName)
+                <br />
+                <span class="host">Host: @(game.Host)</span>
+            </a>
+        }
+    </div>
+    @if (ShowLoadMoreButton)
+    {
+        <button class="load-more" @onclick="() => LoadGames(LIMIT, Games.Count)">Load more</button>
+    }
+}
+
+<style>
+    .add-button {
+        background-color: rgb(5, 0, 107);
+        color: white;
+        border: none;
+        border-radius: 400px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-size: 1rem;
+        margin: 0 2rem 0 1rem;
+        transition: 0.3s ease-out;
+        height: 2.5rem;
+    }
+
+        .add-button:hover {
+            scale: 1.04;
+        }
+
+        .add-button:active {
+            scale: 1.02;
+        }
+
+    .refresh { 
+        background-color: rgb(5, 0, 107);
+        color: white;
+        border: none;
+        border-radius: 400px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-size: 1rem;
+        margin: 0 1rem 0 2rem;
+        transition: 0.3s ease-out;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .refresh:hover {
+            scale: 1.04;
+        }
+
+        .refresh:active {
+            scale: 1.02;
+        }
+    
+    .refresh-img { 
+        height: 90%;
+        aspect-ratio: 1/1;
+    }
+
+    .inline {
+        display: flex;
+        align-items: center;
+    }
+
+    .gameList {
+        margin-top: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .gameListItem {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.5rem;
+        width: 70%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: 0.3s ease-out;
+        /* Blue to purple gradient */
+        background: rgb(2,0,36);
+        background: linear-gradient(90deg, rgb(5, 0, 107) 0%, rgba(60,9,121,1) 35%, rgba(199,0,255,1) 100%);
+        /* text elements */
+        color: #ffffff;
+        text-decoration: none;
+        font-size: medium;
+        font-weight: bold;
+    }
+
+        .gameListItem:hover {
+            scale: 1.02;
+        }
+
+        .gameListItem:active {
+            scale: 0.98;
+        }
+
+    a:hover {
+        text-decoration: none;
+        color: #ffffff;
+    }
+
+    .host {
+        font-size: small;
+        color: #ffffff;
+    }
+
+    .load-more {
+        background-color: rgb(5, 0, 107);
+        color: white;
+        border: none;
+        border-radius: 400px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-size: 1rem;
+        margin: 1rem 0;
+        transition: 0.3s ease-out;
+    }
+
+    .load-more:hover {
+        scale: 1.04;
+    }
+
+    .load-more:active {
+        scale: 1.02;
+    }
+</style>
+
+@code {
+    private string? Token { get; set; }
+
+    const int LIMIT = 5;
+
+    private string ErrorMessage { get; set; } = "";
+
+    private bool ShowLoadMoreButton = true;
+
+    List<WaitingGameResponseDto> Games = new List<WaitingGameResponseDto>();
+
+    protected async override void OnInitialized()
+    {
+        Token = await localStorage.GetItemAsStringAsync("token");
+
+        if (Token == null)
+        {
+            NavigateToLogin();
+            return;
+        }
+
+        Token = Token.Trim('"');
+
+        LoadGames();
+    }
+
+    [CascadingParameter] public IModalService Modal { get; set; } = default!;
+
+    void NewGame()
+    {
+        var parameters = new ModalParameters();
+        Modal.Show<NewGameModal>("New Game", parameters);
+	}
+
+    public async void LoadGames(int limit=LIMIT, int offset=0, bool replace = false)
+    {
+        if (Token == null)
+        {
+            NavigateToLogin();
+            return;
+        }
+
+        var httpResponse = await GameService.SendGetGamesListRequest(Token, limit, offset);
+
+        switch (httpResponse.StatusCode)
+        {
+            case System.Net.HttpStatusCode.OK:
+                var responseStream = await httpResponse.Content.ReadAsStreamAsync();
+                var gameList = await JsonSerializer.DeserializeAsync<WaitingGameResponseDto[]>(
+                    responseStream, ServiceBase.JsonOptions
+                );
+                if (gameList != null) {
+                    if (gameList.Length < LIMIT)
+                    {
+                        ShowLoadMoreButton = false;
+                    }
+                    if (replace)
+                    {
+                        Games = gameList.ToList();
+                    } 
+                    else
+                    {
+                        Games.AddRange(gameList);
+                    }
+                } 
+                else {
+                    ShowLoadMoreButton = false;
+                }
+                StateHasChanged();
+                break;
+            
+            case System.Net.HttpStatusCode.Conflict:
+                var conflictStream = await httpResponse.Content.ReadAsStreamAsync();
+                var gameFound = await JsonSerializer.DeserializeAsync<WaitingGameResponseDto>(
+                    conflictStream, ServiceBase.JsonOptions
+                );
+                if (gameFound != null)
+                    NavigateToGameBoard(gameFound.GameId);
+                break;
+
+            default:
+                ErrorMessage = "Failed to load games.";
+                StateHasChanged();
+                break;
+        }
+    }
+
+    public void RefreshGames()
+    {
+        LoadGames(LIMIT, 0, true);
+    }
+
+    public async void JoinGame(int gameId)
+    {
+        if (Token == null)
+        {
+            NavigateToLogin();
+            return;
+        }
+
+        var httpResponse = await InGameService.SendJoinGameRequest(Token, gameId);
+
+        switch (httpResponse.StatusCode)
+        {
+            case System.Net.HttpStatusCode.OK:
+                var responseStream = await httpResponse.Content.ReadAsStreamAsync();
+                var game = await JsonSerializer.DeserializeAsync<GameIdResponsDto>(
+                    responseStream, ServiceBase.JsonOptions
+                );
+                if (game != null)
+                    NavigateToGameBoard(game.GameId);
+                break;
+
+            case System.Net.HttpStatusCode.Conflict:
+                var conflictStream = await httpResponse.Content.ReadAsStreamAsync();
+                var gameFound = await JsonSerializer.DeserializeAsync<WaitingGameResponseDto>(
+                    conflictStream, ServiceBase.JsonOptions
+                );
+                if (gameFound != null)
+                    NavigateToGameBoard(gameFound.GameId);
+                break;
+
+            default:
+                ErrorMessage = "Failed to join game.";
+                StateHasChanged();
+                break;
+        }
+    }
+
+    public void NavigateToLogin() {
+        Navigation.NavigateTo("/login");
+    }
+
+    public void NavigateToGameBoard(int gameId) {
+        Navigation.NavigateTo($"/gameboard/{gameId}");
+    }
+}

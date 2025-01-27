@@ -1,0 +1,101 @@
+﻿@using Connect4.UI.Data.Services
+@inject InGameService InGameService
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@using System.Text.Json
+@using Connect4.Common.Model
+
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-body">
+            <div class="form-group">
+                <input type="text" class="form-control" id="gameName" placeholder="Enter game name" @bind=GameName>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" @onclick=StartGame>Start Game</button>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @ErrorMessage
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .modal-content {
+        background-color: #f8f9fa;
+        border-radius: 0.3rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .modal-footer {
+        border-top: 1px solid #dee2e6;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+</style>
+
+@code {
+    private string? Token { get; set; }
+
+    private string GameName { get; set; }
+
+    private string ErrorMessage { get; set; } = "";
+    
+    protected async override void OnInitialized()
+    {
+        Token = await localStorage.GetItemAsStringAsync("token");
+
+        if (Token == null)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        Token = Token.Trim('"');
+    }
+
+    public async void StartGame()
+    {
+        if (string.IsNullOrWhiteSpace(GameName))
+        {
+            ErrorMessage = "Game name cannot be empty";
+            return;
+        }
+
+        var httpResponse = await InGameService.SendCreateGameRequest(Token, GameName);
+
+        switch (httpResponse.StatusCode)
+        {
+            case System.Net.HttpStatusCode.OK:
+                var responseStream = await httpResponse.Content.ReadAsStreamAsync();
+                var gameRespDto = await JsonSerializer.DeserializeAsync<GameIdResponsDto>(
+                    responseStream, ServiceBase.JsonOptions
+                );
+                if (gameRespDto == null)
+                {
+                    ErrorMessage = "Failed to create game";
+                    return;
+                }
+                NavigationManager.NavigateTo($"/gameboard/{gameRespDto.GameId}");
+                break;
+
+            case System.Net.HttpStatusCode.Unauthorized:
+                NavigationManager.NavigateTo("/login");
+                break;
+            
+            default:
+                ErrorMessage = "Failed to create game";
+                StateHasChanged();
+                break;
+        }
+    }
+}

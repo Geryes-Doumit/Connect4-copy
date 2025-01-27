@@ -1,0 +1,5 @@
+var class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_not_your_turn_domain_exception_test =
+[
+    [ "Constructor_SetsMessageCorrectly", "class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_not_your_turn_domain_exception_test.html#ad9f79e016e338062673a1ba00a01b328", null ],
+    [ "Constructor_SetsStatusCodeToBadRequest", "class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_not_your_turn_domain_exception_test.html#af6e9e979188b032a62c873f484bb3003", null ]
+];

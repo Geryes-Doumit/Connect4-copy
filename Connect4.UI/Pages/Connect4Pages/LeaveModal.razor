@@ -1,0 +1,121 @@
+﻿@using Blazored.Modal
+@using Blazored.Modal.Services
+@inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@using Connect4.UI.Data.Services
+@inject InGameService GameService
+@using Connect4.Common.Model
+
+<p>Leaving the game will set you as the loser.</p>
+<p>Are you sure ?</p>
+
+<div class="confirm-div">
+    <button class="confirm-button" @onclick="OnConfirm">Yes</button>
+    @if (!string.IsNullOrEmpty(ErrorMsg))
+    {
+        <p class="red">@ErrorMsg</p>
+    }
+</div>
+
+<style>
+    .confirm-div {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .confirm-button {
+        padding: 0.8rem;
+        background: linear-gradient(to right, #4facfe, #00f2fe);
+        border: none;
+        border-radius: 5px;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: 0.2s ease;
+        width: 18%;
+    }
+
+        .confirm-button:hover {
+            transform: scale(1.02);
+        }
+
+        .confirm-button:active {
+            transform: scale(0.98);
+        }
+
+    .red {
+        color: red;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public required string gameId { get; set; }
+    
+    [Parameter]
+    public required GameDetailDto GameDetails { get; set; }
+    
+    public string? Token { get; set; }
+
+    public string ErrorMsg { get; set; } = "";
+
+    protected async override void OnInitialized()
+    {
+        Token = await localStorage.GetItemAsStringAsync("token");
+        if (Token == null)
+        {
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            Token = Token.Trim('"');
+        }
+
+        if (GameDetails.Status == "Finished") // If the game is already finished
+        {
+            Navigation.NavigateTo("/gamelist");
+            return;
+        }
+    }
+
+	public async void OnConfirm()
+	{
+        if (Token == null) {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        if (GameDetails.Status == "Finished") // If the game is already finished
+        {
+            Navigation.NavigateTo("/gamelist");
+            return;
+        }
+
+        var httpResponse = await GameService.SendLeaveGameRequest(Token, gameId);
+
+        switch (httpResponse.StatusCode)
+        {
+            case System.Net.HttpStatusCode.OK:
+                Navigation.NavigateTo("/gamelist");
+                break;
+            case System.Net.HttpStatusCode.Unauthorized:
+                Navigation.NavigateTo("/login");
+                break;
+            case System.Net.HttpStatusCode.NotFound:
+                ErrorMsg = "Game not found";
+                Navigation.NavigateTo("/gamelist");
+                break;
+            case System.Net.HttpStatusCode.BadRequest:
+                ErrorMsg = "Bad request error. Please try again later.";
+                StateHasChanged();
+                break;
+            default:
+                ErrorMsg = "An error occured. Please try again later.";
+                StateHasChanged();
+                break;
+        }
+        
+		Navigation.NavigateTo("/gamelist");
+	}
+}

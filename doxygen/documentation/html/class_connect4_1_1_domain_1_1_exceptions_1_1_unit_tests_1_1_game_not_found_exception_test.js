@@ -1,0 +1,5 @@
+var class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_game_not_found_exception_test =
+[
+    [ "Constructor_SetsMessageCorrectly", "class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_game_not_found_exception_test.html#abcba5cd395a7641aab9c7210345ed871", null ],
+    [ "Constructor_SetsStatusCodeToBadRequest", "class_connect4_1_1_domain_1_1_exceptions_1_1_unit_tests_1_1_game_not_found_exception_test.html#ada8e91700cdf15780b2887c528cbc128", null ]
+];
