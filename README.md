@@ -1,4 +1,4 @@
-### This project has been copied from [Marc Proux's Connect4](https://github.com/Marc-Proux/Connect4). 
+### This project has been copied from [Marc Proux's Connect4](https://gitlab.arcadia-hub.com/cours/n-tiers/Connect-4). 
 
 <h2 align="center">
   Connect 4<br/>
